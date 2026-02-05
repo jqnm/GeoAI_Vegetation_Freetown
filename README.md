@@ -1,13 +1,13 @@
 # Vegetation Type Classification Pipeline
 
-This repository contains the `vegetation_classification.py` pipeline for classifying vegetation and quality from tiled UAV aerial imagery of Freetown, Sierra Leone, using pretrained YOLOv8 model architectur from Ultralytics
+This repository contains the `vegetation_classification.py` pipeline for classifying vegetation and quality from tiled UAV aerial imagery of Freetown, Sierra Leone, using pretrained YOLOv8 model architectur from Ultralytics. Based on the results of this vegetation classification subsequently some patch metrics as well as a connectivity analysis can be determined/performed. 
 
 ![Workflow of the vegetation type classification pipeline ](workflow.jpg)
 
 
 ## Overview
 
-The pipeline handles the entire workflow:
+The **vegetation classification pipeline** handles follwing entire workflow:
 1.  **Labeling**: Interactive GUI for manual context-aware labeling.
 2.  **Training**: Training YOLOv8 classification models.
 3.  **Stitching**: Recombining tiles into a large mosaic map (including a label map).
@@ -15,25 +15,34 @@ The pipeline handles the entire workflow:
 5.  **Inference**: Running predictions on full datasets.
 6.  **Inspection**: Visualizing sample predictions for quality control.
 
+
+The **patch metrics and connectivity analysis** module handles:
+1.  **Raster preprocessing**: Reprojection and I/O utilities.
+2.  **Patch-based landscape metrics**: Quantitative assessment of fragmentation.
+3.  **Local connectivity analysis**: Join-count class connectivity measurements.
+4.  **Main execution**: Integration and output generation for landscape structure.
+
+
+
 ## Requirements
 
 - Python 3.8+
 - `ultralytics` (YOLOv8)
 - `opencv-python`
 - `pillow`
-- `numpy`, `pandas`, `matplotlib`
-- `scikit-learn` (for spatial clustering in CV)
+- `numpy`, `scipy`, `pandas`, `matplotlib`, `pathlib`
+- `scikit-learn`
+- `rasterio`
 
 Install dependencies:
 ```bash
-pip install ultralytics opencv-python pillow numpy pandas matplotlib scikit-learn tqdm
+pip install ultralytics opencv-python pillow numpy pandas matplotlib scikit-learn tqdm rasterio scipy
 ```
 
-Alternatively the provide venv enviroment can be used
 
-## Usage
+## Usage – Vegetation Classification
 
-The script is controlled via terminal commands using the `--stage` argument.
+The vegetation pipeline script is controlled via terminal commands using the `--stage` argument.
 
 ### 1. Labeling (GUI)
 Open the interactive labeling window. You will see a 3x3 context grid around the center tile, which is to be labeled.
@@ -93,8 +102,61 @@ Execute Training -> Inference -> Stitching in sequence.
 python vegetation_classification.py --stage all
 ```
 
+
+
+## Usage – Patch Metrics and Connectivity Analysis
+This module extends the pipeline by computing landscape metrics from the stitched classification maps. The scripts are located in the patch_metrics_and_connectivity_analysis/ subfolder.
+
+### 1. Raster Preprocessing and I/O (`io_utils.py`)
+This module provides basic raster handling utilities used throughout the analysis:
+- Reprojection of rasters to a metric CRS to ensure valid area and distance calculations
+- Loading raster data including array, metadata, NoData value, and CRS
+- Writing output GeoTIFFs with consistent spatial metadata
+All subsequent patch and connectivity calculations rely on these utilities to ensure spatial consistency and reproducibility.
+
+### 2. Patch Metrics (`patch_metrics.py`)
+Patch metrics describe the **spatial configuration and fragmentation** of selected land-cover classes using connected-component labeling (8-neighbourhood).
+Results are printed to the console for quick inspection.
+Computed metrics include:
+- Number of Patches (NP)
+- Patch Density (PD)
+- Mean Patch Size (MPS)
+- Largest Patch Index (LPI)
+- Edge Density (ED)
+- Clumpiness Index, measuring aggregation versus dispersion (range −1 to +1)
+Metrics can be computed for individual classes, combined vegetation classes, or selected vegetation subsets.
+
+### 3. Connectivity Analysis (`join_count_class_connectivity.py`)
+Local connectivity is quantified using a **join-count approach** within a moving window. For each valid pixel, adjacent same-class joins (horizontal and vertical) are counted.
+Implemented variants include:
+- Class-specific connectivity (e.g. no-vegetation class)
+- Vegetation connectivity across multiple vegetation classes
+- Full vegetation connectivity for selected core vegetation classes
+Pixels outside the target classes, NoData values, and NaNs are excluded from the calculations.
+Connectivity results are written to GeoTIFF files for further spatial analysis and visualization.
+
+### 4. Main Execution (`fragmentation.py`)
+The main script integrates all components and executes the full analysis workflow:
+1. Loads and reprojects the stitched vegetation raster
+2. Computes connectivity maps for all defined class groups
+3. Writes connectivity outputs as GeoTIFFs
+4. Computes class-level area statistics and global patch metrics
+5. Calculates clumpiness indices for selected vegetation configurations
+The resulting outputs provide a **quantitative characterization of landscape structure, fragmentation, and spatial connectivity**, complementing the vegetation type classification pipeline.
+
+
+
 ## File Structure
+- `vegetation_classification.py`: Main entry point for classification.
+- `patch_metrics_and_connectivity_analysis/`:
+    - `io_utils.py`: Raster I/O utilities.
+    - `patch_metrics.py`: Calculation of landscape metrics.
+    - `join_count_class_connectivity.py`: Connectivity algorithms.
+    - `fragmentation.py`: Analysis integration script.
 - `datasets/all_tiles`: Input image tiles (must be named `..._r{row}_c{col}.ext`)
 - `datasets/cls_pool`: Labeled data sorted by class.
 - `models/`: Saved model weights.
 - `outputs/`: Inference grids, maps, stitched mosaics, and inspection plots.
+
+
+
