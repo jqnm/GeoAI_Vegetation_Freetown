@@ -2,7 +2,7 @@
 
 This repository contains the `vegetation_classification.py` pipeline for classifying vegetation and quality from tiled UAV aerial imagery of Freetown, Sierra Leone, using pretrained YOLOv8 model architectur from Ultralytics
 
-![Workflow of the vegetation type classification pipeline ](workflow.png)
+![Workflow of the vegetation type classification pipeline ](workflow.jpg)
 
 
 ## Overview
